@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Echo-Net | Alumni Platform</title>
+    
+    <style>
+        /* Base Variables and Reset */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: sans-serif; }
+
+        :root {
+            --bg-dark: #0a0a0a;
+            --bg-panel: #161616;
+            --bg-hover: #222222;
+            --text-main: #f0f0f0;
+            --text-muted: #a0a0a0;
+            --accent-green: #00ff41;
+            --danger-red: #ff4444;
+        }
+
+        body { background-color: var(--bg-dark); color: var(--text-main); }
+        .hidden { display: none !important; }
+
+        /* --- Shared Modal/View Styles --- */
+        .centered-view { display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 2rem; }
+        .panel-container { background: var(--bg-panel); padding: 3rem; border-radius: 8px; width: 100%; max-width: 450px; border: 1px solid #333; }
+        
+        .logo-large { color: var(--accent-green); text-align: center; margin-bottom: 0.5rem; }
+        .tagline-small { text-align: center; color: var(--text-muted); margin-bottom: 2rem; font-size: 0.9rem; }
+        .panel-title { text-align: center; margin-bottom: 1.5rem; }
+        
+        .input-group { margin-bottom: 1.5rem; }
+        .input-group label { display: block; margin-bottom: 0.5rem; font-size: 0.9rem; }
+        .input-group input, .input-group select { 
+            width: 100%; padding: 0.8rem; background: var(--bg-dark); border: 1px solid #444; 
+            color: white; border-radius: 4px; outline: none;
+        }
+        .input-group input:focus, .input-group select:focus { border-color: var(--accent-green); }
+        
+        .btn-primary { background: var(--accent-green); color: black; padding: 0.8rem; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; width: 100%; }
+        .btn-danger { background: var(--danger-red); color: white; padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
+        .btn-outline { background: transparent; border: 1px solid var(--accent-green); color: var(--accent-green); padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; }
+        
+        .text-link { color: var(--accent-green); text-align: center; display: block; margin-top: 1rem; cursor: pointer; text-decoration: underline; font-size: 0.9rem; }
+        .error-text { color: var(--danger-red); text-align: center; margin-top: 1rem; font-size: 0.9rem; min-height: 20px; }
+
+        /* --- Admin Dashboard Styles --- */
+        #adminView { padding: 2rem; max-width: 1000px; margin: 0 auto; }
+        .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid #333; }
+        .admin-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 2rem; }
+        
+        .admin-card { background: var(--bg-panel); padding: 1.5rem; border-radius: 8px; border: 1px solid #333; }
+        .admin-card h3 { margin-bottom: 1rem; color: var(--accent-green); }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { text-align: left; padding: 1rem; border-bottom: 1px solid #333; }
+        th { color: var(--text-muted); font-weight: normal; }
+        tr:hover { background-color: var(--bg-hover); }
+
+        /* --- Chat Dashboard Styles --- */
+        #chatView { display: grid; grid-template-columns: 350px 1fr; height: 100vh; overflow: hidden; }
+        .sidebar { background: var(--bg-panel); border-right: 1px solid #333; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 1.5rem; border-bottom: 1px solid #333; }
+        .active-user { color: var(--accent-green); font-size: 0.9rem; margin-top: 0.5rem; }
+        .contact-list { overflow-y: auto; flex: 1; }
+        .contact { display: flex; padding: 1rem; border-bottom: 1px solid #222; cursor: pointer; }
+        .contact:hover, .contact.active { background: var(--bg-hover); }
+        .contact.active { border-left: 4px solid var(--accent-green); }
+        .avatar { font-size: 2rem; margin-right: 1rem; }
+        .contact-info h4 { margin-bottom: 0.2rem; }
+        .contact-info p { font-size: 0.8rem; color: var(--text-muted); }
+        .chat-main { display: flex; flex-direction: column; background: var(--bg-dark); }
+        .chat-header { padding: 1.5rem; background: var(--bg-panel); border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
+        .chat-messages { flex: 1; padding: 2rem; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem; }
+        .message { max-width: 60%; padding: 1rem; border-radius: 8px; line-height: 1.4; }
+        .message.received { background: var(--bg-panel); align-self: flex-start; border-left: 3px solid #444; }
+        .message.sent { background: rgba(0, 255, 65, 0.1); border-right: 3px solid var(--accent-green); align-self: flex-end; color: var(--accent-green); }
+        .chat-input-area { padding: 1.5rem; background: var(--bg-panel); display: flex; gap: 1rem; }
+        .chat-input-area input { flex: 1; padding: 1rem; background: var(--bg-dark); border: 1px solid #333; color: white; border-radius: 4px; outline: none; }
+    </style>
+</head>
+<body>
+
+    <!-- 1. AUTHENTICATION VIEW -->
+    <div id="authView" class="centered-view">
+        <div class="panel-container">
+            <h1 class="logo-large">🔗📣 Echo-Net</h1>
+            <p class="tagline-small">The Echo of Guidance, The Net of Growth</p>
+            <h2 id="authTitle" class="panel-title">Login</h2>
+            
+            <form id="authForm">
+                <div class="input-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" required placeholder="Enter username">
+                </div>
+                
+                <div class="input-group hidden" id="emailGroup">
+                    <label for="email">Gmail Address</label>
+                    <input type="email" id="email" placeholder="example@gmail.com">
+                </div>
+
+                <div class="input-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" required placeholder="Enter password">
+                </div>
+                
+                <div class="input-group hidden" id="roleGroup">
+                    <label for="role">I am a:</label>
+                    <select id="role">
+                        <option value="Junior">Junior (Student)</option>
+                        <option value="Senior">Senior (Alumni)</option>
+                    </select>
+                </div>
+
+                <!-- Registration Security Questions -->
+                <div id="registerSecurityGroup" class="hidden">
+                    <hr style="border-color: #333; margin: 1.5rem 0;">
+                    <p style="color: var(--accent-green); margin-bottom: 1rem; font-size: 0.9rem;">Set Security Questions (For Password Recovery)</p>
+                    
+                    <div class="input-group">
+                        <label>1. What is your favorite color?</label>
+                        <input type="text" id="regSq1" placeholder="Answer 1">
+                    </div>
+                    <div class="input-group">
+                        <label>2. What city were you born in?</label>
+                        <input type="text" id="regSq2" placeholder="Answer 2">
+                    </div>
+                    <div class="input-group">
+                        <label>3. What is your pet's name?</label>
+                        <input type="text" id="regSq3" placeholder="Answer 3">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-primary" id="authBtn">Login</button>
+            </form>
+
+            <a class="text-link" id="forgotPasswordLink">Forgot Password?</a>
+            <p class="text-link" id="toggleAuthMode">New user? Create an account here.</p>
+            <div id="authError" class="error-text"></div>
+        </div>
+    </div>
+
+    <!-- 2. SECURITY QUESTIONS VIEW (Forgot Password) -->
+    <div id="securityView" class="centered-view hidden">
+        <div class="panel-container">
+            <h2 class="panel-title">Security Verification</h2>
+            <p style="text-align: center; color: var(--text-muted); margin-bottom: 1.5rem;">
+                Answer your 3 security questions to reset your password.
+            </p>
+            
+            <form id="securityForm">
+                <div class="input-group">
+                    <label>1. What is your favorite color?</label>
+                    <input type="text" id="ans1" required placeholder="Answer 1">
+                </div>
+                <div class="input-group">
+                    <label>2. What city were you born in?</label>
+                    <input type="text" id="ans2" required placeholder="Answer 2">
+                </div>
+                <div class="input-group">
+                    <label>3. What is your pet's name?</label>
+                    <input type="text" id="ans3" required placeholder="Answer 3">
+                </div>
+                
+                <button type="submit" class="btn-primary">Verify Answers</button>
+            </form>
+            <p class="text-link" onclick="cancelSecurity()">Cancel</p>
+            <div id="securityError" class="error-text"></div>
+        </div>
+    </div>
+
+    <!-- 3. RESET PASSWORD VIEW -->
+    <div id="resetView" class="centered-view hidden">
+        <div class="panel-container">
+            <h2 class="panel-title">Reset Password</h2>
+            
+            <form id="resetForm">
+                <div class="input-group">
+                    <label for="newPassword">New Password</label>
+                    <input type="password" id="newPassword" required placeholder="Enter new password">
+                </div>
+                <button type="submit" class="btn-primary">Save New Password</button>
+            </form>
+            <div id="resetError" class="error-text"></div>
+        </div>
+    </div>
+
+    <!-- 4. ADMIN DASHBOARD VIEW -->
+    <div id="adminView" class="hidden">
+        <div class="admin-header">
+            <h1 class="logo-large" style="margin: 0;">🔗📣 Echo-Net Admin Center</h1>
+            <button class="btn-outline" onclick="logout()">Admin Logout</button>
+        </div>
+        
+        <div class="admin-grid">
+            <!-- Add User Panel -->
+            <div class="admin-card">
+                <h3>Add New User</h3>
+                <form id="adminAddUserForm">
+                    <div class="input-group">
+                        <input type="text" id="adminNewUsername" required placeholder="Username">
+                    </div>
+                    <div class="input-group">
+                        <input type="email" id="adminNewEmail" required placeholder="Gmail Address">
+                    </div>
+                    <div class="input-group">
+                        <input type="password" id="adminNewPassword" required placeholder="Password">
+                    </div>
+                    <div class="input-group">
+                        <select id="adminNewRole" required>
+                            <option value="Junior">Junior</option>
+                            <option value="Senior">Senior</option>
+                        </select>
+                    </div>
+                    <!-- Admin assigns default security answers so the account doesn't break -->
+                    <input type="hidden" id="adminSq1" value="admin">
+                    <input type="hidden" id="adminSq2" value="admin">
+                    <input type="hidden" id="adminSq3" value="admin">
+                    
+                    <button type="submit" class="btn-primary">Create User Directly</button>
+                    <div id="adminError" class="error-text"></div>
+                </form>
+            </div>
+
+            <!-- Manage Users Panel -->
+            <div class="admin-card">
+                <h3>Manage Users</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Gmail</th>
+                            <th>Role</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="adminUserTable">
+                        <!-- Populated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. CHAT DASHBOARD VIEW -->
+    <div id="chatView" class="hidden">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2 class="logo-large" style="text-align: left;">🔗📣 Echo-Net</h2>
+                <div id="activeUser" class="active-user">Loading...</div>
+            </div>
+            <div class="contact-list" id="contactList"></div>
+        </aside>
+
+        <main class="chat-main">
+            <header class="chat-header">
+                <h3 id="currentChatTitle">Placement Cell Group</h3>
+                <button class="btn-outline" onclick="logout()">Logout</button>
+            </header>
+            <div class="chat-messages" id="chatBox"></div>
+            <form class="chat-input-area" id="chatForm">
+                <input type="text" id="messageInput" placeholder="Type a message..." required>
+                <button type="submit" class="btn-primary" style="width: auto;">Send</button>
+            </form>
+        </main>
+    </div>
+
+    <!-- =========================
+         JAVASCRIPT LOGIC
+    ========================== -->
+    <script>
+        // --- State Variables ---
+        let isLoginMode = true;
+        let currentUser = null;
+        let currentChatTarget = 'Global';
+        let userToReset = null;
+
+        // --- Database Initialization ---
+        if (!localStorage.getItem("echoNetUsers")) localStorage.setItem("echoNetUsers", JSON.stringify([]));
+        if (!localStorage.getItem("echoNetMessages")) localStorage.setItem("echoNetMessages", JSON.stringify([
+            { sender: "System", receiver: "Global", text: "Welcome to Echo-Net. Start networking!", timestamp: new Date().toISOString() }
+        ]));
+
+        // --- Utility: View Switcher ---
+        function showView(viewId) {
+            ['authView', 'securityView', 'resetView', 'adminView', 'chatView'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            document.getElementById(viewId).classList.remove('hidden');
+        }
+
+        // --- 1. Auth Toggle ---
+        document.getElementById("toggleAuthMode").addEventListener("click", () => {
+            isLoginMode = !isLoginMode;
+            document.getElementById("authError").textContent = "";
+            
+            const reqFields = ["email", "role", "regSq1", "regSq2", "regSq3"];
+
+            if (isLoginMode) {
+                document.getElementById("authTitle").textContent = "Login";
+                document.getElementById("authBtn").textContent = "Login";
+                document.getElementById("roleGroup").classList.add("hidden");
+                document.getElementById("emailGroup").classList.add("hidden");
+                document.getElementById("registerSecurityGroup").classList.add("hidden");
+                document.getElementById("forgotPasswordLink").classList.remove("hidden");
+                
+                reqFields.forEach(id => document.getElementById(id).removeAttribute("required"));
+                document.getElementById("toggleAuthMode").textContent = "New user? Create an account here.";
+            } else {
+                document.getElementById("authTitle").textContent = "Create Account";
+                document.getElementById("authBtn").textContent = "Register & Join";
+                document.getElementById("roleGroup").classList.remove("hidden");
+                document.getElementById("emailGroup").classList.remove("hidden");
+                document.getElementById("registerSecurityGroup").classList.remove("hidden");
+                document.getElementById("forgotPasswordLink").classList.add("hidden");
+                
+                reqFields.forEach(id => document.getElementById(id).setAttribute("required", "true"));
+                document.getElementById("toggleAuthMode").textContent = "Already have an account? Login here.";
+            }
+        });
+
+        // --- 2. Auth Submit (Login or Register) ---
+        document.getElementById("authForm").addEventListener("submit", (e) => {
+            e.preventDefault();
+            const authError = document.getElementById("authError");
+            authError.textContent = "";
+
+            const username = document.getElementById("username").value.trim();
+            const password = document.getElementById("password").value;
+            let allUsers = JSON.parse(localStorage.getItem("echoNetUsers"));
+
+            // Check for ADMIN LOGIN
+            if (isLoginMode && username === 'admin123' && password === 'AdminPass123!') {
+                currentUser = { username: 'Admin', role: 'System Admin' };
+                showView('adminView');
+                renderAdminTable();
+                return;
+            }
+
+            if (!isLoginMode) {
+                // Handle Registration
+                const email = document.getElementById("email").value.trim();
+                const role = document.getElementById("role").value;
+                const sq1 = document.getElementById("regSq1").value.trim().toLowerCase();
+                const sq2 = document.getElementById("regSq2").value.trim().toLowerCase();
+                const sq3 = document.getElementById("regSq3").value.trim().toLowerCase();
+
+                if (allUsers.find(u => u.username.toLowerCase() === username.toLowerCase())) {
+                    authError.textContent = "Username already exists.";
+                    return;
+                }
+                if (allUsers.find(u => u.email.toLowerCase() === email.toLowerCase())) {
+                    authError.textContent = "Email is already registered.";
+                    return;
+                }
+
+                // Save user directly to local storage
+                allUsers.push({ username, email, password, role, sq1, sq2, sq3 });
+                localStorage.setItem("echoNetUsers", JSON.stringify(allUsers));
+                
+                alert("Account created successfully! You can now log in.");
+                document.getElementById("authForm").reset();
+                document.getElementById("toggleAuthMode").click(); // Switch to login UI
+                
+            } else {
+                // Handle Standard Login
+                const foundUser = allUsers.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
+                if (!foundUser) {
+                    authError.textContent = "Invalid username or password.";
+                    return;
+                }
+                
+                currentUser = foundUser;
+                localStorage.setItem("echoNetSession", JSON.stringify(currentUser));
+                loadDashboard();
+            }
+        });
+
+        // --- 3. Forgot Password Request ---
+        document.getElementById("forgotPasswordLink").addEventListener("click", () => {
+            const identifier = prompt("Enter your registered Username or Gmail Address:");
+            if (!identifier) return;
+
+            let allUsers = JSON.parse(localStorage.getItem("echoNetUsers"));
+            const user = allUsers.find(u => u.username.toLowerCase() === identifier.toLowerCase() || u.email.toLowerCase() === identifier.toLowerCase());
+
+            if (user) {
+                userToReset = user;
+                document.getElementById("securityForm").reset();
+                document.getElementById("securityError").textContent = "";
+                showView('securityView');
+            } else {
+                alert("No account found with that Username or Email.");
+            }
+        });
+
+        function cancelSecurity() {
+            userToReset = null;
+            showView('authView');
+        }
+
+        // --- 4. Verify Security Questions ---
+        document.getElementById("securityForm").addEventListener("submit", (e) => {
+            e.preventDefault();
+            
+            const ans1 = document.getElementById("ans1").value.trim().toLowerCase();
+            const ans2 = document.getElementById("ans2").value.trim().toLowerCase();
+            const ans3 = document.getElementById("ans3").value.trim().toLowerCase();
+
+            if (ans1 === userToReset.sq1 && ans2 === userToReset.sq2 && ans3 === userToReset.sq3) {
+                // Answers match, allow reset
+                document.getElementById("resetError").textContent = "";
+                document.getElementById("newPassword").value = "";
+                showView('resetView');
+            } else {
+                document.getElementById("securityError").textContent = "The answer given is not correct.";
+            }
+        });
+
+        // --- 5. Reset Password Execution ---
+        document.getElementById("resetForm").addEventListener("submit", (e) => {
+            e.preventDefault();
+            const newPassword = document.getElementById("newPassword").value;
+            
+            let allUsers = JSON.parse(localStorage.getItem("echoNetUsers"));
+            const userIndex = allUsers.findIndex(u => u.username === userToReset.username);
+            
+            if (userIndex !== -1) {
+                allUsers[userIndex].password = newPassword;
+                localStorage.setItem("echoNetUsers", JSON.stringify(allUsers));
+                alert("Password changed successfully! You can now log in.");
+                showView('authView');
+            }
+        });
+
+        // --- 6. Admin Logic ---
+        function renderAdminTable() {
+            const allUsers = JSON.parse(localStorage.getItem("echoNetUsers"));
+            const tbody = document.getElementById("adminUserTable");
+            tbody.innerHTML = "";
+
+            allUsers.forEach((user, index) => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${user.username}</td>
+                        <td>${user.email}</td>
+                        <td>${user.role}</td>
+                        <td><button class="btn-danger" onclick="deleteUser(${index})">Remove</button></td>
+                    </tr>
+                `;
+            });
+        }
+
+        document.getElementById("adminAddUserForm").addEventListener("submit", (e) => {
+            e.preventDefault();
+            const username = document.getElementById("adminNewUsername").value.trim();
+            const email = document.getElementById("adminNewEmail").value.trim();
+            const password = document.getElementById("adminNewPassword").value;
+            const role = document.getElementById("adminNewRole").value;
+            
+            // Default security questions for admin-created accounts
+            const sq1 = document.getElementById("adminSq1").value;
+            const sq2 = document.getElementById("adminSq2").value;
+            const sq3 = document.getElementById("adminSq3").value;
+
+            let allUsers = JSON.parse(localStorage.getItem("echoNetUsers"));
+            
+            if (allUsers.find(u => u.username.toLowerCase() === username.toLowerCase())) {
+                document.getElementById("adminError").textContent = "Username already exists.";
+                return;
+            }
+
+            allUsers.push({ username, email, password, role, sq1, sq2, sq3 });
+            localStorage.setItem("echoNetUsers", JSON.stringify(allUsers));
+            
+            document.getElementById("adminAddUserForm").reset();
+            document.getElementById("adminError").textContent = "";
+            renderAdminTable();
+        });
+
+        window.deleteUser = function(index) {
+            if(confirm("Are you sure you want to remove this user?")) {
+                let allUsers = JSON.parse(localStorage.getItem("echoNetUsers"));
+                allUsers.splice(index, 1);
+                localStorage.setItem("echoNetUsers", JSON.stringify(allUsers));
+                renderAdminTable();
+            }
+        };
+
+        // --- 7. Standard Chat Logic ---
+        function loadDashboard() {
+            showView('chatView');
+            document.getElementById("activeUser").textContent = `Logged in as: ${currentUser.username} (${currentUser.role})`;
+            renderSidebar();
+            renderChat();
+        }
+
+        function renderSidebar() {
+            const allUsers = JSON.parse(localStorage.getItem("echoNetUsers"));
+            const contactList = document.getElementById("contactList");
+            
+            let html = `
+                <div class="contact ${currentChatTarget === 'Global' ? 'active' : ''}" data-target="Global">
+                    <div class="avatar">🏫</div>
+                    <div class="contact-info">
+                        <h4>Placement Cell Group</h4>
+                        <p>Global Alumni Chat</p>
+                    </div>
+                </div>
+            `;
+
+            allUsers.forEach(user => {
+                if (user.username !== currentUser.username) {
+                    const avatarEmoji = user.role === 'Senior' ? '👩‍💼' : '🎓';
+                    const roleColor = user.role === 'Senior' ? '#00ff41' : '#a0a0a0';
+                    const isActive = currentChatTarget === user.username ? 'active' : '';
+
+                    html += `
+                        <div class="contact ${isActive}" data-target="${user.username}">
+                            <div class="avatar">${avatarEmoji}</div>
+                            <div class="contact-info">
+                                <h4>${user.username} <span style="font-size: 0.7rem; color: ${roleColor};">(${user.role})</span></h4>
+                                <p>Private Chat</p>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            contactList.innerHTML = html;
+            document.querySelectorAll('.contact').forEach(contactEl => {
+                contactEl.addEventListener('click', function() {
+                    currentChatTarget = this.getAttribute('data-target');
+                    document.getElementById("currentChatTitle").textContent = currentChatTarget === 'Global' ? 'Placement Cell Group' : `Chat with ${currentChatTarget}`;
+                    renderSidebar(); 
+                    renderChat();
+                });
+            });
+        }
+
+        function renderChat() {
+            const allMessages = JSON.parse(localStorage.getItem("echoNetMessages"));
+            const chatBox = document.getElementById("chatBox");
+            chatBox.innerHTML = '';
+
+            const relevantMessages = allMessages.filter(msg => {
+                if (currentChatTarget === 'Global') return msg.receiver === 'Global';
+                return (msg.sender === currentUser.username && msg.receiver === currentChatTarget) || 
+                       (msg.sender === currentChatTarget && msg.receiver === currentUser.username);
+            });
+
+            relevantMessages.forEach(msg => {
+                const isSentByMe = msg.sender === currentUser.username;
+                chatBox.innerHTML += `
+                    <div class="message ${isSentByMe ? 'sent' : 'received'}">
+                        <strong style="font-size: 0.8em; opacity: 0.7;">${isSentByMe ? 'You' : msg.sender}</strong><br>
+                        ${msg.text}
+                    </div>
+                `;
+            });
+
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        document.getElementById("chatForm").addEventListener("submit", (e) => {
+            e.preventDefault();
+            const messageInput = document.getElementById("messageInput");
+            const text = messageInput.value.trim();
+            
+            if (text) {
+                const allMessages = JSON.parse(localStorage.getItem("echoNetMessages"));
+                allMessages.push({
+                    sender: currentUser.username,
+                    receiver: currentChatTarget,
+                    text: text,
+                    timestamp: new Date().toISOString()
+                });
+                localStorage.setItem("echoNetMessages", JSON.stringify(allMessages));
+                
+                messageInput.value = "";
+                renderChat();
+            }
+        });
+
+        // --- 8. Global Logout ---
+        window.logout = function() {
+            localStorage.removeItem("echoNetSession");
+            currentUser = null;
+            currentChatTarget = 'Global'; 
+            
+            document.getElementById("authForm").reset();
+            document.getElementById("authError").textContent = "";
+            showView('authView');
+        };
+
+        // Check for existing session on page load
+        if (localStorage.getItem("echoNetSession")) {
+            currentUser = JSON.parse(localStorage.getItem("echoNetSession"));
+            loadDashboard();
+        }
+    </script>
+</body>
+</html>
